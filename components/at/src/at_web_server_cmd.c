@@ -1010,9 +1010,9 @@ static esp_err_t at_web_apply_wifi_connect_info(int32_t udp_port)
     // when udp_port == -1, it's web browser post data to config wifi. otherwise, Now, It's WeChat post data to config wifi.
     // when (strlen((char *)connect_config->ssid) == 0) && (udp_port != -1), it's WeChat post data, and target AP is local phone.
     char host_server_str[128] = {0};
-    strcpy(host_server_str,"+WEBSERVERRSP:1,")
-    strcat(host_server_str, connect_config->host_server)
-    strcat(host_server_str,"\r\n")
+    strcpy(host_server_str,"+WEBSERVERRSP:1,");
+    strcat(host_server_str, connect_config->host_server);
+    strcat(host_server_str,"\r\n");
 
     if ((strlen((char *)connect_config->ssid) != 0) || (udp_port == -1)) {
         ESP_LOGI(TAG, "Use SSID %s direct connect", (char *)connect_config->ssid);
@@ -1154,7 +1154,7 @@ err:
 static esp_err_t at_get_wifi_info_from_json_str(char *buffer, wifi_sta_connect_config_t *config)
 {
     char ssid[33] = {0}, password[65] = {0}, host_server[65] = {0};
-    int32_t ssid_len = 0, password_len = 0;
+    int32_t ssid_len = 0, password_len = 0, host_server_len = 0;
     cJSON *root = NULL, *item = NULL, *value_item = NULL;
 
     root = cJSON_Parse(buffer);
