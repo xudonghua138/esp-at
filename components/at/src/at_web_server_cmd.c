@@ -1011,7 +1011,7 @@ static esp_err_t at_web_apply_wifi_connect_info(int32_t udp_port)
     // when (strlen((char *)connect_config->ssid) == 0) && (udp_port != -1), it's WeChat post data, and target AP is local phone.
     char host_server_str[128] = {0};
     strcpy(host_server_str,"+WEBSERVERRSP:1,");
-    strcat(host_server_str, connect_config->host_server);
+    strcat(host_server_str, (char *)connect_config->host_server);
     strcat(host_server_str,"\r\n");
 
     if ((strlen((char *)connect_config->ssid) != 0) || (udp_port == -1)) {
