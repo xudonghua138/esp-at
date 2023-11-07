@@ -127,6 +127,7 @@ typedef struct web_server_context {
 typedef struct {
     uint8_t ssid[33];
     uint8_t password[65];
+    uint8_t host_server[65];
 } wifi_sta_connect_config_t;
 
 typedef enum {
@@ -1008,6 +1009,11 @@ static esp_err_t at_web_apply_wifi_connect_info(int32_t udp_port)
     // According to config wifi device to try connect
     // when udp_port == -1, it's web browser post data to config wifi. otherwise, Now, It's WeChat post data to config wifi.
     // when (strlen((char *)connect_config->ssid) == 0) && (udp_port != -1), it's WeChat post data, and target AP is local phone.
+    char host_server_str[128] = {0};
+    strcpy(host_server_str,"+WEBSERVERRSP:1,")
+    strcat(host_server_str, connect_config->host_server)
+    strcat(host_server_str,"\r\n")
+
     if ((strlen((char *)connect_config->ssid) != 0) || (udp_port == -1)) {
         ESP_LOGI(TAG, "Use SSID %s direct connect", (char *)connect_config->ssid);
         ret = at_web_try_connect(connect_config->ssid, connect_config->password, NULL, NULL);
@@ -1019,7 +1025,8 @@ static esp_err_t at_web_apply_wifi_connect_info(int32_t udp_port)
             connection_info.config_status = ESP_AT_WIFI_STA_CONNECTING;
             at_web_update_sta_connection_info(&connection_info);
             // send a message to MCU
-            esp_at_port_active_write_data((uint8_t*)s_wifi_start_connect_response, strlen(s_wifi_start_connect_response));
+            //esp_at_port_active_write_data((uint8_t*)s_wifi_start_connect_response, strlen(s_wifi_start_connect_response));
+            esp_at_port_active_write_data((uint8_t*)host_server_str, strlen(host_server_str));
         }
 
         s_wifi_sta_connect_timer_handler = xTimerCreate("listen_sta_connect_status", ESP_AT_WEB_TIMER_POLLING_PERIOD / portTICK_PERIOD_MS, pdTRUE,
@@ -1038,7 +1045,8 @@ static esp_err_t at_web_apply_wifi_connect_info(int32_t udp_port)
         connection_info.config_status = ESP_AT_WIFI_STA_CONNECTING;
         at_web_update_sta_connection_info(&connection_info);
         // send a message to MCU
-        esp_at_port_active_write_data((uint8_t*)s_wifi_start_connect_response, strlen(s_wifi_start_connect_response));
+        //esp_at_port_active_write_data((uint8_t*)s_wifi_start_connect_response, strlen(s_wifi_start_connect_response));
+        esp_at_port_active_write_data((uint8_t*)host_server_str, strlen(host_server_str));
         // begin scan and try connect,attention, this function will block until connect successfully or reach max_scan_time or reach connect_num
         ret = at_web_start_scan_filter(s_mobile_phone_mac, connect_config->password, connect_timeout, s_wifi_sta_connect_event_group);
         // when function return, it means have finished scan and try connect.
@@ -1145,7 +1153,7 @@ err:
 
 static esp_err_t at_get_wifi_info_from_json_str(char *buffer, wifi_sta_connect_config_t *config)
 {
-    char ssid[33] = {0}, password[65] = {0};
+    char ssid[33] = {0}, password[65] = {0}, host_server[65] = {0};
     int32_t ssid_len = 0, password_len = 0;
     cJSON *root = NULL, *item = NULL, *value_item = NULL;
 
@@ -1181,10 +1189,24 @@ static esp_err_t at_get_wifi_info_from_json_str(char *buffer, wifi_sta_connect_c
             strncpy(password, item->valuestring, password_len);
         }
     }
+
+    item = cJSON_GetObjectItem(root, "host_server");
+    if (item) {
+        host_server_len = strlen(item->valuestring);
+        ESP_LOGD(TAG, "host_server:%s", item->valuestring);
+        if (host_server_len > 64) {
+            ESP_LOGE(TAG, "host_server is too long");
+            return ESP_FAIL;
+        } else {
+            strncpy(host_server, item->valuestring, host_server_len);
+        }
+    }
+
     cJSON_Delete(root);
 
     memcpy(config->ssid, ssid, ssid_len);
     memcpy(config->password, password, password_len);
+    memcpy(config->host_server, host_server, host_server_len);
 
     return ESP_OK;
 }
